@@ -21,3 +21,6 @@ assumptions you made in completing this task.
 - Qty/Units - the number of physical units we sold
 - Dollars/$ Sales - is the dollar amount collected
 - Online Sales sold online at the retailer's website
+
+## Questions
+- Is the Dollars/$ Sales *always* in USD?
