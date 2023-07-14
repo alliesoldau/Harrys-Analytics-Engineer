@@ -24,3 +24,5 @@ assumptions you made in completing this task.
 
 ## Questions
 - Is the Dollars/$ Sales *always* in USD?
+- Does timezone affect date?
+- Why aren't the online sales divied up by store?
