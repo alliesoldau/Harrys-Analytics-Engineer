@@ -1,5 +1,4 @@
 import sqlite3
-from datetime import datetime
 # SOURCE: pandas tutorial: https://www.youtube.com/watch?v=Q_JilB0sKfg&ab_channel=DanLeeman
 # SOURCE: python to pandas to sql: https://learn.microsoft.com/en-us/sql/machine-learning/data-exploration/python-dataframe-sql-server?view=sql-server-ver16
 import pandas as pd
@@ -14,6 +13,10 @@ online_sales_raw = pd.read_csv('online_sales.csv', header=0)
 # drop any rows with empty cells
 store_sales = store_sales_raw.dropna()
 online_sales = online_sales_raw.dropna()
+# create a seperate table for any dropped rows that analysts could manually examine and input once ammended
+# TO DO: return this table of dropped store sales for the analyst
+dropped_store_sales = store_sales_raw[~store_sales_raw.index.isin(store_sales.index)]
+dropped_online_sales = online_sales_raw[~online_sales_raw.index.isin(online_sales.index)]
 # reset indexes after dropping rows
 store_sales.reset_index(drop=True, inplace=True)
 online_sales.reset_index(drop=True, inplace=True)
@@ -57,7 +60,20 @@ cursor.execute("""CREATE Table if not exists OnlineSales
                     )
                 """)
 
-# TO DO: deal with messy or errored data
+# grab the unique date values from online sales and store sales so that we can check our data to ignore these dates
+cursor.execute("""SELECT date from StoreSales""")
+store_sales_db_dates = cursor.fetchall()
+store_sales_db_dates = [x[0] for x in store_sales_db_dates]
+#  CURRENT TO DO: figure out how to make my list of store_sales_db_dates be a list of strings and not a weirdly
+    # formatted type of tuples
+cursor.execute("""SELECT date from OnlineSales""")
+online_sales_db_dates = cursor.fetchall()
+online_sales_db_dates = [x[0] for x in online_sales_db_dates]
+# filter out any dates that we already have logged in our database
+# now we'll only update the database with any new data that was in the data dump
+store_sales = store_sales[~store_sales['Day'].isin(store_sales_db_dates)]
+online_sales = online_sales[~online_sales['Date'].isin(online_sales_db_dates)]
+
 # grab the unique store names to check against existing database
 cursor.execute("""SELECT name from Stores""")
 all_stores = cursor.fetchall()
@@ -121,7 +137,6 @@ for index in range(len(store_sales)):
                         )
                             VALUES (?,?,?,?,?)
                     """, current_store_sale)
-
 
 # Input online sales into the OnlineSales database
 for index in range(len(online_sales)): 
