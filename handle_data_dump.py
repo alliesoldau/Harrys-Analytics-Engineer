@@ -3,6 +3,9 @@ import sqlite3
 # SOURCE: python to pandas to sql: https://learn.microsoft.com/en-us/sql/machine-learning/data-exploration/python-dataframe-sql-server?view=sql-server-ver16
 import pandas as pd
 
+# TO DO: add in some edge case handling that will check things like numbers being numbers, etc.
+# TO DO: the write up
+
 # create and connect to SQL database
 connection = sqlite3.connect('sales_data.sqlite')
 cursor = connection.cursor()
@@ -14,9 +17,19 @@ online_sales_raw = pd.read_csv('online_sales.csv', header=0)
 store_sales = store_sales_raw.dropna()
 online_sales = online_sales_raw.dropna()
 # create a seperate table for any dropped rows that analysts could manually examine and input once ammended
-# TO DO: return this table of dropped store sales for the analyst
 dropped_store_sales = store_sales_raw[~store_sales_raw.index.isin(store_sales.index)]
 dropped_online_sales = online_sales_raw[~online_sales_raw.index.isin(online_sales.index)]
+
+print('Please note that any rows that were COMPLETELY empty have been dropped.')
+if len(dropped_store_sales) > 0:
+    print('There are this many problematic rows in stores sales:', len(dropped_store_sales))
+    print('These are the store sales that have missing/problematic data. Please review this data. Once it is cleaned up, you can re-upload it to this program to it will push the fixed data to the database:', dropped_store_sales )
+else: print('All of the raw store sales data looks good!')
+if len(dropped_online_sales > 0):
+    print('There are this many problematic rows in online sales:', len(dropped_online_sales))
+    print('These are the online sales that have missing/problematic data. Please review this data. Once it is cleaned up, you can re-upload it to this program to it will push the fixed data to the database:', dropped_online_sales )
+else: print('All of the raw online sales data looks good!')
+
 # reset indexes after dropping rows
 store_sales.reset_index(drop=True, inplace=True)
 online_sales.reset_index(drop=True, inplace=True)
@@ -64,8 +77,7 @@ cursor.execute("""CREATE Table if not exists OnlineSales
 cursor.execute("""SELECT date from StoreSales""")
 store_sales_db_dates = cursor.fetchall()
 store_sales_db_dates = [x[0] for x in store_sales_db_dates]
-#  CURRENT TO DO: figure out how to make my list of store_sales_db_dates be a list of strings and not a weirdly
-    # formatted type of tuples
+
 cursor.execute("""SELECT date from OnlineSales""")
 online_sales_db_dates = cursor.fetchall()
 online_sales_db_dates = [x[0] for x in online_sales_db_dates]
@@ -99,11 +111,7 @@ for row in products:
         all_products.append(row)
         cursor.execute('INSERT INTO Products(SKU) VALUES (?)', (row,))
 
-# TO DO: now i've created my base tables and i have to go through the actual transactions to create the joiner table
-# TO DO: can't forget to clean the data, handle duplicates, double check that any data from previous days hasnt changed
-    # and if it has, add that to the database/alert analysts
-
-# Input store sales into the StoreSales database
+# input store sales into the StoreSales database
 for index in range(len(store_sales)): 
     current_store_sale = []
     # I'm dealing with each column seperately so that I can double-check and clean the data indvidually as needed
@@ -138,7 +146,7 @@ for index in range(len(store_sales)):
                             VALUES (?,?,?,?,?)
                     """, current_store_sale)
 
-# Input online sales into the OnlineSales database
+# input online sales into the OnlineSales database
 for index in range(len(online_sales)): 
     current_online_sale = []
     # I'm dealing with each column seperately so that I can double-check and clean the data indvidually as needed
@@ -167,6 +175,7 @@ for index in range(len(online_sales)):
                             VALUES (?,?,?,?)
                     """, current_online_sale)
     
+print('All of your data has been handled.')    
 
 connection.commit()
 connection.close()
