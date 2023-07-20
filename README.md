@@ -71,7 +71,6 @@ for Analysts to use.**
 - What should happen if there are missing values or errors in the input data?
 - What does the final table(s) look like that an Analyst could use to build reporting?
 - If we were to expand to more retailers how would your code scale to handling?
-    - Adding new stores/products is as simple as dropping it into the data dump file. The code will scan the data to see if there are any stores/products that don't currently exist in our database, and if there is, it will create a new row in the stores/products table to represent that new store/product.
 - If an analyst using these pipelines found questionable data how would you advise they QA/troubleshoot the pipeline?
 
 Please provide your code and a brief write-up describing your design decisions and any
