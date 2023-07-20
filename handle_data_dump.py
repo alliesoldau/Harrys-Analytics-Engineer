@@ -1,10 +1,6 @@
 import sqlite3
-# SOURCE: pandas tutorial: https://www.youtube.com/watch?v=Q_JilB0sKfg&ab_channel=DanLeeman
-# SOURCE: python to pandas to sql: https://learn.microsoft.com/en-us/sql/machine-learning/data-exploration/python-dataframe-sql-server?view=sql-server-ver16
 import pandas as pd
-
-# TO DO: add in some edge case handling that will check things like numbers being numbers, etc.
-# TO DO: the write up
+import datetime
 
 # create and connect to SQL database
 connection = sqlite3.connect('sales_data.sqlite')
@@ -19,16 +15,6 @@ online_sales = online_sales_raw.dropna()
 # create a seperate table for any dropped rows that analysts could manually examine and input once ammended
 dropped_store_sales = store_sales_raw[~store_sales_raw.index.isin(store_sales.index)]
 dropped_online_sales = online_sales_raw[~online_sales_raw.index.isin(online_sales.index)]
-
-print('Please note that any rows that were COMPLETELY empty have been dropped.')
-if len(dropped_store_sales) > 0:
-    print('There are this many problematic rows in stores sales:', len(dropped_store_sales))
-    print('These are the store sales that have missing/problematic data. Please review this data. Once it is cleaned up, you can re-upload it to this program to it will push the fixed data to the database:', dropped_store_sales )
-else: print('All of the raw store sales data looks good!')
-if len(dropped_online_sales > 0):
-    print('There are this many problematic rows in online sales:', len(dropped_online_sales))
-    print('These are the online sales that have missing/problematic data. Please review this data. Once it is cleaned up, you can re-upload it to this program to it will push the fixed data to the database:', dropped_online_sales )
-else: print('All of the raw online sales data looks good!')
 
 # reset indexes after dropping rows
 store_sales.reset_index(drop=True, inplace=True)
@@ -91,9 +77,12 @@ cursor.execute("""SELECT name from Stores""")
 all_stores = cursor.fetchall()
 # grab all unique store values from the dumped data
 stores = store_sales['Store'].unique()
+
 # if any of the stores in the dumped data don't currently exist in the database, add them in
 for row in stores:
-    if (isinstance(row, str) and all_stores.count(row) == 0):
+    # ensure all stores are being stored as strings
+    row = str(row)
+    if (all_stores.count(row) == 0):
         all_stores.append(row)
         cursor.execute('INSERT INTO Stores(name) VALUES (?)', (row,))
 
@@ -107,7 +96,9 @@ online_products = online_sales['Product'].unique() # currently online stores don
 products = list(set(online_products) | set(store_products))
 # if any products in the dumped data don't currently exist in the database, add them in
 for row in products:
-    if (isinstance(row, str) and all_products.count(row) == 0):
+    # ensure all products are being stored as strings
+    row = str(row)
+    if (all_products.count(row) == 0):
         all_products.append(row)
         cursor.execute('INSERT INTO Products(SKU) VALUES (?)', (row,))
 
@@ -115,8 +106,9 @@ for row in products:
 for index in range(len(store_sales)): 
     current_store_sale = []
     # I'm dealing with each column seperately so that I can double-check and clean the data indvidually as needed
+    # ensure product name is being stored as a string
+    product_name = str(store_sales.loc[index, 'Product'])
     # grab the product id
-    product_name = store_sales.loc[index, 'Product']
     cursor.execute('SELECT id FROM Products WHERE SKU=?', (product_name,))
     product_id = ((cursor.fetchall())[0])[0]
     current_store_sale.append(product_id)
@@ -126,14 +118,27 @@ for index in range(len(store_sales)):
     store_id = ((cursor.fetchall())[0])[0]
     current_store_sale.append(store_id)
     # grab the date
-    current_date = store_sales.loc[index, 'Day']
-    current_store_sale.append(current_date)
-    # grab the units
-    current_units = store_sales.loc[index, 'QTY']
+    current_date_string = store_sales.loc[index, 'Day']
+    current_store_sale.append(current_date_string)
+    date_format = '%Y-%m-%d'
+    # use try-except block to ensure that our date is datetime compatable
+        # if it's not, add it to an array which will be fed back to our analyst so they can fix the data and continue the loop
+    try:
+        current_date = datetime.datetime.strptime(current_date_string, date_format)
+    except: 
+        dropped_store_sales.append(store_sales[index])
+        continue
+    # grab the units and ensure they're being strored as ints
+    current_units = int(store_sales.loc[index, 'QTY'])
     current_store_sale.append(current_units)
-    # grab the dollars & round them to the nearest cent
-    current_dollars = store_sales.loc[index, '$ Sales']
+    # grab the dollars, ensure it's a float, & round them to the nearest cent
+    current_dollars = float(store_sales.loc[index, '$ Sales'])
     current_store_sale.append(round(current_dollars, 2))
+    # make sure there are no errors with the code before inserting it into our database
+        # if there is an error, append it to our dropped store sales for the analyst, and continue the loop
+    if not isinstance(current_units, int) or not isinstance(current_dollars, float):
+        dropped_store_sales.append(store_sales[index])
+        continue
     # insert the sales into the stores sales table
     cursor.execute("""INSERT INTO StoreSales
                         ( 
@@ -150,20 +155,33 @@ for index in range(len(store_sales)):
 for index in range(len(online_sales)): 
     current_online_sale = []
     # I'm dealing with each column seperately so that I can double-check and clean the data indvidually as needed
-    # grab the product id
-    product_name = online_sales.loc[index, 'Product']
+    # grab the product id and ensure it's being stored as a string
+    product_name = str(online_sales.loc[index, 'Product'])
     cursor.execute('SELECT id FROM Products WHERE SKU=?', (product_name,))
     product_id = ((cursor.fetchall())[0])[0]
     current_online_sale.append(product_id)
-    # grab the date
-    current_date = online_sales.loc[index, 'Date']
-    current_online_sale.append(current_date)
-    # grab the units
-    current_units = online_sales.loc[index, 'Units']
+    # grab the date and ensure it's in the correct format
+    current_date_string = online_sales.loc[index, 'Date']
+    current_online_sale.append(current_date_string)
+    date_format = '%Y-%m-%d'
+    # use try-except block to ensure that our date is datetime compatable
+            # if it's not, add it to an array which will be fed back to our analyst so they can fix the data and continue the loop
+    try:
+        current_date = datetime.datetime.strptime(current_date_string, date_format)
+    except: 
+        dropped_online_sales.append(online_sales[index])
+        continue
+    # grab the units and ensure they're in int format
+    current_units = int(online_sales.loc[index, 'Units'])
     current_online_sale.append(current_units)
-    # grab the dollars & round them to the nearest cent
-    current_dollars = online_sales.loc[index, 'Dollars']
+    # grab the dollars, ensure they're floats, & round them to the nearest cent
+    current_dollars = float(online_sales.loc[index, 'Dollars'])
     current_online_sale.append(round(current_dollars, 2))
+     # make sure there are no errors with the code before inserting it into our database
+        # if there is an error, append it to our dropped store sales for the analyst, and continue the loop
+    if not isinstance(current_units, int) or not isinstance(current_dollars, float):
+        dropped_online_sales.append(online_sales[index])
+        continue
     # insert the sales into the stores sales table
     cursor.execute("""INSERT INTO OnlineSales
                         ( 
@@ -174,7 +192,16 @@ for index in range(len(online_sales)):
                         )
                             VALUES (?,?,?,?)
                     """, current_online_sale)
-    
+
+print('Please note that any rows that were COMPLETELY empty have been dropped.')
+if len(dropped_store_sales) > 0:
+    print('There are this many problematic rows in stores sales:', len(dropped_store_sales))
+    print('These are the store sales that have missing/problematic data. Please review this data. Once it is cleaned up, you can re-upload it to this program to it will push the fixed data to the database:', dropped_store_sales )
+else: print('All of the raw store sales data looks good!')
+if len(dropped_online_sales > 0):
+    print('There are this many problematic rows in online sales:', len(dropped_online_sales))
+    print('These are the online sales that have missing/problematic data. Please review this data. Once it is cleaned up, you can re-upload it to this program to it will push the fixed data to the database:', dropped_online_sales )
+else: print('All of the raw online sales data looks good!')    
 print('All of your data has been handled.')    
 
 connection.commit()
