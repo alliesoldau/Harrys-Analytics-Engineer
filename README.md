@@ -1,5 +1,37 @@
 # Harry's Analytics Engineer Coding Project
 
+**_Allie's answers are in italics_**
+
+## _Instructions for How to Run the Code_
+   1. _Ensure you have Python3 downloaded on your local environment._
+      * _[Link for How to Check Your Python Version](https://blog.amphy.com/how-to-check-python-version/)_
+      * _[Link to Python Download Instructions](https://www.python.org/downloads/)_
+   2. _Ensure you have Sqlite installed on your local enviornment. Use Sqlite version 3.39.5. I can't gauruntee it works with the latest version._
+      * _[Link for How to Check Your Sqlite Version](https://database.guide/check-sqlite-version/)_
+      * _[Link to Sqlite Download Instructions](https://www.sqlitetutorial.net/download-install-sqlite/)_
+   3. _Run_ `python3 handle_data_dump.py` _in the root directory in the terminal._ 
+      * _This will take the_ `online_sales.csv` _and_ `store_sales.csv` _files, clean out any rows that have problematic data, return that problem data in the terminal for the analyst to see, and parse the good data into 4 tables in the Sqlite file_ `sales_data.sqlite`.
+      * _[Link for How to Run Python Commands in the Terminal](https://realpython.com/run-python-scripts/#:~:text=To%20run%20Python%20scripts%20with,see%20the%20phrase%20Hello%20World!)._
+   4. _Run_ `python3 graphs.py` _in the root directory in the terminal._
+      * _This will create 2 pop-up graphs to demonstrate to demonstrate what an analyst could do with the data. The graphs have a tendancy to populate on a different monitor, so you may need to check your laptop and any external monitors for the pop-up._
+
+## _Database Configuration_
+    * _The database consists of 4 tables as described below:_
+        * **_Products_**
+            * _All stores are associated with a unique id to make it easier to reference them_
+        * **_Stores_**
+            * _All products are associated with a unique id to make it easier to reference them_
+        * **_StoreSales_**
+            * _Joiner table which contains all the info about the store sales_
+        * **_OnlineSales_**
+            * _Joiner table which contains all the info about the online sales_
+
+|                |ASCII                          |HTML                         |
+|----------------|-------------------------------|-----------------------------|
+|Single backticks|`'Isn't this fun?'`            |'Isn't this fun?'            |
+|Quotes          |`"Isn't this fun?"`            |"Isn't this fun?"            |
+|Dashes          |`-- is en-dash, --- is em-dash`|-- is en-dash, --- is em-dash|
+
 ## Task
 
 This exercise contains two sales datasets for a retailer, store level sales and online sales. **Your
